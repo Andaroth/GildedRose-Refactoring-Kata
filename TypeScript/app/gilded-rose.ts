@@ -8,62 +8,71 @@ export class Item {
         this.sellIn = sellIn;
         this.quality = quality;
     }
-}
+} // left class untouched
+
+export class ConjuredItem extends Item {
+    conjured?: boolean;
+    constructor(name,sellIn,quality,conjured?) {
+        super(name,sellIn,quality);
+        this.conjured = conjured || (name && name.toLowerCase().indexOf('conjured') != -1);
+    }
+} // extends Item to add conjured prop
 
 export class GildedRose {
-    items: Array<Item>;
+    items: Array<ConjuredItem>;
 
-    constructor(items = [] as Array<Item>) {
+    constructor(items = [] as Array<ConjuredItem>) {
         this.items = items;
     }
 
-    updateQuality() {
-        for (let i = 0; i < this.items.length; i++) {
-            if (this.items[i].name != 'Aged Brie' && this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-                if (this.items[i].quality > 0) {
-                    if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                        this.items[i].quality = this.items[i].quality - 1
-                    }
-                }
-            } else {
-                if (this.items[i].quality < 50) {
-                    this.items[i].quality = this.items[i].quality + 1
-                    if (this.items[i].name == 'Backstage passes to a TAFKAL80ETC concert') {
-                        if (this.items[i].sellIn < 11) {
-                            if (this.items[i].quality < 50) {
-                                this.items[i].quality = this.items[i].quality + 1
-                            }
-                        }
-                        if (this.items[i].sellIn < 6) {
-                            if (this.items[i].quality < 50) {
-                                this.items[i].quality = this.items[i].quality + 1
-                            }
-                        }
-                    }
-                }
-            }
-            if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                this.items[i].sellIn = this.items[i].sellIn - 1;
-            }
-            if (this.items[i].sellIn < 0) {
-                if (this.items[i].name != 'Aged Brie') {
-                    if (this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-                        if (this.items[i].quality > 0) {
-                            if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                                this.items[i].quality = this.items[i].quality - 1
-                            }
-                        }
-                    } else {
-                        this.items[i].quality = this.items[i].quality - this.items[i].quality
-                    }
-                } else {
-                    if (this.items[i].quality < 50) {
-                        this.items[i].quality = this.items[i].quality + 1
-                    }
-                }
-            }
-        }
+    isBrie(item) { return item && item.name && item.name === 'Aged Brie'; }
+    isElite(item) { return item && item.name && item.name === 'Backstage passes to a TAFKAL80ETC concert'; }
+    isSulfuras(item) { return item && item.name && item.name === 'Sulfuras, Hand of Ragnaros'; }
+    isBroken(item) { return item && item.quality && item.quality <= 0; }
+    isLegendary(item) { return this.isSulfuras(item) }
+    isQualityMax(item) { return item && item.quality && (!this.isLegendary(item)) ? item.quality >= 50 : item.quality >= 80; }
+    isOutdated(item) { return item && item.sellIn && item.sellIn <= 0; }
+    // new props
+    isConjured(item) { return item && item.conjured || false; }
 
+    updateQuality() {
+        this.items.forEach((item,idx)=>{
+            if (!this.isBrie(item) && !this.isElite(item)) { // NOT brie && NOT elite
+                if (!this.isBroken(item)) { // NOT broken
+                    if (!this.isSulfuras(item)) {
+                        if (!this.isConjured(item)) { item.quality -= 1; }
+                        else { item.quality -= 2; }
+                    }
+                }
+            } else if (!this.isQualityMax(item)) { // if quality NOT MAX
+                item.quality += 1;
+                if (this.isElite(item)) { // IS 80etc
+                    if (item.sellIn <= 10) { // 10 or less
+                        if (!this.isQualityMax(item)) { item.quality += 1; } // one more
+                    }
+                    if (item.sellIn <= 5) { // 5 or less day left
+                        if (!this.isQualityMax(item)) { item.quality += 1; } // one more
+                    }
+                }
+            }
+            if (this.isOutdated(item)) { // outdated !
+                if (!this.isBrie(item)) { // not brie
+                    if (!this.isElite(item)) { // not 80etc
+                        if (!this.isBroken(item)) { // not broken
+                            if (!this.isSulfuras(item)) { // not sulfuras
+                                if (!this.isConjured(item)) { item.quality -= 1; }
+                                else { item.quality -= 2; }
+                            }
+                        }
+                    }
+                } else { // IS BRIE
+                    if (!this.isQualityMax(item)) { item.quality += 1; }
+                }
+            }
+            if (!this.isSulfuras(item)) { item.sellIn -= 1; }// end of the day, remove 1 durability
+            this.items[idx] = item;
+        });
         return this.items;
     }
 }
+/* For The Horde */
